@@ -192,17 +192,17 @@ dataset.
 """
 # %%
 # Defino un a funcion para solo tener que pasar el dataset de la region
-def plt_median(dt, region):
+def plt_mean(dt, region):
     pf_identity_graph = seaborn.lineplot(
         y='pf_identity', x='year',
         data=dt,
-        estimator=numpy.median,
+        estimator=numpy.mean,
         label='pf_identity'
     )
     hf_score_graph = seaborn.lineplot(
         y='hf_score', x='year',
         data=dt,
-        estimator=numpy.median,
+        estimator=numpy.mean,
         label='hf_score'
     )
     hf_score_graph.set(ylabel='', xlabel='Year')
@@ -210,7 +210,7 @@ def plt_median(dt, region):
     plt.show()
 
 # %%
-plt_median(world, 'Global')
+plt_mean(world, 'Global')
 
 
 # %%
@@ -221,54 +221,54 @@ plt_median(world, 'Global')
 """
 
 # %%
-plt_median(latam, 'Latin America & the Caribbean')
+plt_mean(latam, 'Latin America & the Caribbean')
 
 # %%
 east_eu = dataset['Eastern Europe' == dataset['region']]
 
-plt_median(east_eu, 'Eastern Europe')
+plt_mean(east_eu, 'Eastern Europe')
 
 # %%
 middle_east_north_af = dataset[
     'Middle East & North Africa' == dataset['region']
 ]
 
-plt_median(middle_east_north_af, 'Middle East & North Africa')
+plt_mean(middle_east_north_af, 'Middle East & North Africa')
 
 # %%
 sub_sahara_af = dataset['Sub-Saharan Africa' == dataset['region']]
 
-plt_median(middle_east_north_af, 'Sub-Saharan Africa')
+plt_mean(middle_east_north_af, 'Sub-Saharan Africa')
 
 # %%
 cau_central_as = dataset['Caucasus & Central Asia' == dataset['region']]
 
-plt_median(cau_central_as, 'Caucasus & Central Asia')
+plt_mean(cau_central_as, 'Caucasus & Central Asia')
 
 # %%
 oceania = dataset['Oceania' == dataset['region']]
 
-plt_median(oceania, 'Oceania')
+plt_mean(oceania, 'Oceania')
 
 # %%
 wes_eu = dataset['Western Europe' == dataset['region']]
 
-plt_median(wes_eu, 'Western Europe')
+plt_mean(wes_eu, 'Western Europe')
 
 # %%
 south_as = dataset['South Asia' == dataset['region']]
 
-plt_median(south_as, 'South Asia')
+plt_mean(south_as, 'South Asia')
 
 # %%
 north_am = dataset['North America' == dataset['region']]
 
-plt_median(north_am, 'North America')
+plt_mean(north_am, 'North America')
 
 # %%
 east_as = dataset['East Asia' == dataset['region']]
 
-plt_median(east_as, 'East Asia')
+plt_mean(east_as, 'East Asia')
 
 # %%
 """
@@ -279,19 +279,120 @@ Por otra parte `hf_score`, a pesar de no tener saltos abruptos en ninguna
 región no tiene una tendencia mundial.
 """
 
+# %%
+dataset["Venezuela"==dataset["countries"]][['pf_identity', 'year']]
 
 # %%
 """
-3. Si lo consideran necesario, grafiquen algunos países de Latinoamerica para
-   tratar de explicar la tendencia de la variable `pf_identity` en la región.
-   ¿Cómo seleccionarion los países relevantes a esa tendencia?
+Parte 2
+=======
 
-> **Pista:** hay gráficos de seaborn que permiten generar visualizaciones para
-> cada valor de una variable categórica, en este caso, las distintas regiones.
+Luego del segundo fin de semana de clase, podemos revisitar nuestro trabajo
+anterior y completarlo respondiendo a las siguientes preguntas:
+"""
+
+# %%
+"""
+3. Distribuciones
+-----------------
+
+Realizar una prueba de Kolmogorov-Smirnof para comprobar analíticamente
+si estas variables responden la distribución propuesta en el ejercicio
+anterior. Hint: podés usar
+
+https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.stats.kstest.html
+
+pero hay que tener en cuenta que si la distribución es "norm",
+entonces va a comparar los datos con una distribución normal con media
+0 y desviación estándar 1. Se puede utilizar la distribución sobre todos
+ los datos o sólo sobre Latinoamérica.
+"""
+
+# %%
+from scipy import stats
+
+la_dist = dataset['Latin America & the Caribbean' == dataset['region']]['pf_identity']
+la_dist = la_dist.dropna() # Remove missing values.
+la_dist = la_dist.subtract(la_dist.mean()) # Center data around 0 (zero)
+
+# %%
+# lambda function to center the distribution around zero
+center_zero = lambda x: x-x.mean()
+
+# scipy provides us with funtions to make samples of diferent distributions
+# we can see them here:
+
+# https://docs.scipy.org/doc/scipy-0.14.0/reference/stats.html#continuous-distributions
+
+r = center_zero(stats.beta.rvs(0.2, 0.5, size=1000))
+# stats.beta.rvs(0.2, 0.5, size=1000) means that we will create a Beta
+# distribution with a=0.2, b=0.5 and it will have 1000 samples.
+
+# r = stats.norm.rvs(size=1000) Normal
+# r = stats.norm.rvs(size=1000) Normal
+
+# We can now compare the distributions like so:
+
+seaborn.kdeplot(la_dist, label="LA distribution")
+seaborn.kdeplot(r, label="Beta distribution")
+
+# %%
+stats.norm.rvs(size=1000)
+
+# %%
+
+# Run K-S test with the latinoamerica distribution and beta distribution
+print(stats.kstest(la_dist, 'beta', args=[0.2, 0.5]))
+
+# %%
+
+"""
+La prueba K-S compara la distribucion acumulada de una distribución con otra.
+En nuestro ejemplo comparamos a de Latinoamerica con `pf_identity` con
+una distribución Beta. El valor que nos da la celda anterior podemos ver que
+el p-value es muy grande lo que quiere decir es que es muy poco confiable decir
+que las distribuciones son parecidas.
+
+No tenemos la comparacion para `hf_score` (no sé si deberiamos adivinar primero
+y despues fijarnos en las posibilidades de scipy) y para `pf_identity` global
+elegimos una distribucion bimodal pero en scipy no tenemos distribuciones
+bimodales. solo hay algunas distribuciones "dobles" (`dgamma`, `dweibull`).
+
+Probé con varias distribuciones pero no pude hacer que verdaderamente se
+parezcan.
+
+Acá estan todas:
+https://docs.scipy.org/doc/scipy-0.14.0/reference/stats.html#continuous-distributions
 """
 
 
+# %%
 """
-Sólo por curiosidad, graficar la tendencia de `hf_score` y `ef_score` a
-través de los años. ¿Tienen alguna hipótesis para este comportamiento?
+4. Correlaciones
+---------------
+
+Calcular algún coeficiente de correlación adecuado entre los dos pares
+de variables, dependiendo de la cantidad de datos, el tipo de datos y
+la distribución de los mismo. Algunas opciones son: coeficiente de
+pearson, coeficiente de spearman, coeficientes de tau y de kendall.
+Interpretar los resultados y justificar si las variables están
+ correlacionadas o no.
+
+[Opcional] Analizar la correlación entre la region y el pf_score
+(y/o el ef_score); y entre la region y el pf_identity. Considerar que
+como la variable region es ordinal, debe utilizarse algún tipo de test.
+Explicar cuáles son los requisitos necesarios para la aplicación de ese test.
+ (Si no se cumplieran, se pueden agregar algunos datos para generar
+ más registros). Genere nuevas variables categóricas ordinales para
+ calcular la correlación Tau de Kendal y genere una tabla de contingencia
+ con esas nuevas variables.
+
+Además de completar estos puntos faltantes, luego de haber visitado los
+conceptos de percepción visual y comunicación efectiva, están en
+condiciones de reveer los gráficos realizados y evaluar si pueden ser
+mejorados. Para ello, puede hacerse las siguientes preguntas:
+
+¿Están utilizando el tipo de gráfico adecuado para cada tipo de variable?
+Los gráficos, ¿son legibles?
+Los gráficos generados, ¿responden a las preguntas mostrando un patrón claro? En caso de que no, ¿podemos filtrar los datos para que el patrón sea más evidente? ¿o agruparlos de manera distinta? ¿o cambiar el tipo de gráfico?
 """
